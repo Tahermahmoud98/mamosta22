@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیسته‌مێ پێشکەفتی یێ خشتێ قوتابخانێ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --bs-primary-rgb: 78, 115, 223; --bs-body-bg: #f8f9fa; --bs-body-color: #5a5c69;
+            --bs-card-bg: #fff; --bs-border-color: #e3e6f0; --bs-table-striped-bg: #f8f9fc;
+        }
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #212529; --bs-body-color: #ecf0f1; --bs-card-bg: #2c3034;
+            --bs-border-color: #495057; --bs-table-striped-bg: #32383e;
+        }
+        body { font-family: "Noto Kufi Arabic", sans-serif; font-size: 0.95rem; }
+        body.modal-open { overflow: hidden; } /* Prevent background scrolling when modal is open */
+        
+        .main-container { margin-top: 20px; display: none; /* Initially hidden */ }
+        .card { box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); border-radius: 1rem; }
+        .card-header { padding: 1rem 1.5rem; background-color: rgba(var(--bs-primary-rgb), 0.03); border-bottom: 1px solid var(--bs-border-color); }
+        .table { vertical-align: middle; }
+        .table th, .table td { text-align: center; white-space: nowrap; padding: 8px; }
+        .subjects-cell, .class-distribution-cell { white-space: normal; }
+        .drag-handle { cursor: grab; }
+        .column-header { cursor: grab; position: relative; }
+
+        /* SortableJS ghost class for visual feedback */
+        .sortable-ghost { opacity: 0.4; background: #c8ebfb; }
+
+        .btn-delete-col {
+            position: absolute; top: 4px; left: 4px; border: none; background: transparent; color: #aaa;
+            font-size: 0.8rem; opacity: 0; transition: opacity 0.2s ease-in-out, color 0.2s ease-in-out;
+            padding: 2px; line-height: 1; cursor: pointer;
+        }
+        th:hover .btn-delete-col { opacity: 1; }
+        .btn-delete-col:hover { color: #e74a3b; }
+        .nav-tabs .nav-link.active { color: #4e73df; border-color: #dddfeb #dddfeb #fff; }
+        .empty-state { text-align: center; padding: 40px; color: #858796; }
+        
+        #table-body > tbody:not(:first-child) { border-top: 3px solid rgba(0, 0, 0, 0.15); }
+        [data-bs-theme="dark"] #table-body > tbody:not(:first-child) { border-top-color: rgba(255, 255, 255, 0.15); }
+        #table-body > tbody:nth-of-type(odd) tr { background-color: var(--bs-table-striped-bg); }
+        #table-body > tbody:hover tr { background-color: rgba(var(--bs-primary-rgb), 0.05); }
+
+        .class-distribution-cell-padded, .subjects-cell-padded {
+            padding: 0 !important; vertical-align: top !important; 
+        }
+        .class-distribution-cell-padded .subject-entry, .subjects-cell-padded .subject-entry {
+            padding: 8px; min-height: 38px; display: flex; align-items: center; justify-content: center;
+        }
+        .class-distribution-cell-padded .subject-entry:not(:first-child), .subjects-cell-padded .subject-entry:not(:first-child) {
+            border-top: 1px solid var(--bs-border-color);
+        }
+        .modal-header .btn-close { margin-left: 0; margin-right: auto; }
+        .stat-card { background-color: rgba(var(--bs-primary-rgb), 0.05); border: 1px solid rgba(var(--bs-primary-rgb), 0.1); }
+        .stat-card h6 { color: #4e73df; }
+        [data-bs-theme="dark"] .stat-card { background-color: rgba(255, 255, 255, 0.05); }
+        .nisab-table input { max-width: 80px; text-align: center; }
+
+        /* --- Welcome Screen V3 (Premium Design) --- */
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+        }
+        @keyframes fadeInSlideUp {
+            from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          *, ::before, ::after {
+            animation-delay: -1ms !important;
+            animation-duration: 1ms !important;
+            animation-iteration-count: 1 !important;
+            background-attachment: initial !important;
+            scroll-behavior: auto !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+          }
+        }
+
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 9999; display: flex; justify-content: center; align-items: center;
+            padding: 20px; transition: opacity 0.6s ease-out, visibility 0.6s;
+            background: linear-gradient(-45deg, #0b2241, #1e4273, #23a6d5, #23d5ab);
+            background-size: 400% 400%; animation: gradientAnimation 18s ease infinite;
+            color: #fff; perspective: 1000px; /* For 3D tilt effect */
+        }
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1.5rem; padding: 2.5rem 3rem; max-width: 750px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            text-align: center;
+            transform-style: preserve-3d; /* For 3D tilt effect */
+            transition: transform 0.1s ease-out; /* Smooth tilt transition */
+        }
+        .welcome-card > * { animation: fadeInSlideUp 0.9s cubic-bezier(0.25, 1, 0.5, 1) backwards; }
+        .welcome-card h1 { animation-delay: 0.1s; }
+        .welcome-card p.lead { animation-delay: 0.2s; opacity: 0.9; }
+        .welcome-card #startButton { animation-delay: 0.3s; }
+        .welcome-card .creator-info { animation-delay: 0.4s; }
+
+        .welcome-title { font-weight: 800; text-shadow: 2px 2px 5px rgba(0,0,0,0.25); }
+        #startButton {
+            font-weight: 600; border-radius: 50px;
+            transition: all 0.3s ease; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            border: none; background: #fff; color: #1e4273;
+            padding: 1rem 2.5rem;
+        }
+        #startButton:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .creator-info { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.2); font-size: 0.95rem; }
+        .creator-info p { margin-bottom: 1rem; opacity: 0.8; }
+        .social-icons { margin: 1.5rem 0 1rem; }
+        .social-icons a {
+            color: #fff; font-size: 1.6rem; margin: 0 10px; text-decoration: none;
+            transition: all 0.3s ease; display: inline-block; animation: fadeInSlideUp 0.9s backwards;
+        }
+        /* Staggered animation for social icons */
+        .social-icons a:nth-child(1) { animation-delay: 0.5s; }
+        .social-icons a:nth-child(2) { animation-delay: 0.6s; }
+        .social-icons a:nth-child(3) { animation-delay: 0.7s; }
+        .social-icons a:nth-child(4) { animation-delay: 0.8s; }
+        .social-icons a:nth-child(5) { animation-delay: 0.9s; }
+        .social-icons a:nth-child(6) { animation-delay: 1.0s; }
+        .social-icons a:nth-child(7) { animation-delay: 1.1s; }
+
+        .social-icons a:hover { transform: scale(1.25) rotate(5deg); color: #cdeeff; }
+        .copyright { font-size: 0.8rem; margin-top: 1.5rem; opacity: 0.6; }
+        #welcome-screen.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+
+        /* Print Styles */
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print, .no-print * { display: none !important; }
+            .table { font-size: 7pt; }
+            .table th, .table td { padding: 1px 2px; }
+            #additionalTablesContainer .table { margin-top: 25px !important; font-size: 9pt; }
+            #additionalTablesContainer .table td { height: 30px; }
+            #managerSignature { margin-top: 40px; }
+            .table .badge {
+                background-color: transparent !important; color: inherit !important;
+                border: none !important; padding: 0 !important; font-size: inherit !important;
+                font-weight: normal !important;
+            }
+            @page { size: landscape; margin: 0.5cm; }
+        }
+    </style>
+</head>
+<body data-bs-theme="light">
+
+    <!-- Welcome Screen V3 -->
+    <div id="welcome-screen">
+        <div class="welcome-card">
+            <i class="fas fa-table fa-4x mb-4"></i>
+            <h1 class="display-4 welcome-title">سیسته‌مێ پێشکەفتی یێ خشتێ قوتابخانێ</h1>
+            <p class="lead">خشتێ وانه‌كان ب شێوازه‌كێ هونه‌ری و ئاسان دروست بكه‌</p>
+            <button id="startButton" class="btn btn-light btn-lg shadow-lg mt-4">ده‌سپێكه‌</button>
+            <div class="creator-info">
+                <p>دروستكرن ژلایێ ماموستا: <strong>طاهر محمود محمد</strong> (قوتابخانا جودی یا بنه‌ره‌ت)</p>
+                <div class="social-icons">
+                    <a href="https://www.facebook.com/share/16KUSHtffJ/" target="_blank" title="Facebook"><i class="fab fa-facebook"></i></a>
+                    <a href="https://www.instagram.com/taher_mahmoud98?igsh=dm5jN3ZtMmttcDg5" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://wa.me/+9647503727069" target="_blank" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                    <a href="https://www.snapchat.com/add/tahermahmoud98?share_id=Npt2HjbFTP0&locale=ar-EG" target="_blank" title="Snapchat"><i class="fab fa-snapchat"></i></a>
+                    <a href="https://t.me/+9647503727069" target="_blank" title="Telegram"><i class="fab fa-telegram-plane"></i></a>
+                    <a href="viber://chat?number=%2B9647503727069" target="_blank" title="Viber"><i class="fab fa-viber"></i></a>
+                    <a href="https://www.threads.com/@taher_mahmoud98" target="_blank" title="Threads"><i class="fab fa-threads"></i></a>
+                </div>
+                <p class="copyright">&copy; هه‌می ماف پاراستینه‌</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid main-container">
+        <!-- The rest of your application code is here, unchanged -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <h4 class="card-title mb-2 mb-md-0 text-primary fw-bold"><i class="fas fa-table me-2"></i>سیسته‌مێ رێكخستنا خشتان</h4>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" id="themeSwitcher" title="گوهورینا دیمەنی"><label class="form-check-label" for="themeSwitcher"><i class="fas fa-moon"></i></label></div>
+                        <div class="d-flex align-items-center gap-2">
+                           <label class="form-label mb-0 fw-bold">خشتێ چالاك:</label>
+                           <select class="form-select form-select-sm w-auto" id="scheduleSelector"></select>
+                           <button class="btn btn-outline-secondary btn-sm" onclick="renameActiveSchedule()" title="گوهورینا ناڤێ خشتێ چالاك"><i class="fas fa-pencil-alt"></i></button>
+                           <button class="btn btn-outline-danger btn-sm" onclick="deleteActiveSchedule()" title="ژێبرنا خشتێ چالاك"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="distribution-tab" data-bs-toggle="tab" data-bs-target="#distribution-tab-pane" type="button"><i class="fas fa-users-cog me-2"></i>دابەشکرنا وانان</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="nisab-tab" data-bs-toggle="tab" data-bs-target="#nisab-tab-pane" type="button"><i class="fas fa-tasks me-2"></i>نصاب وانان</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#statistics-tab-pane" type="button"><i class="fas fa-chart-pie me-2"></i>ئامار</button></li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="myTabContent">
+                    <!-- Distribution Tab -->
+                    <div class="tab-pane fade show active" id="distribution-tab-pane" role="tabpanel">
+                        <div class="d-flex flex-wrap gap-3 justify-content-between my-3 no-print">
+                             <div class="control-panel d-flex flex-wrap gap-2 align-items-center">
+                                <button class="btn btn-primary btn-sm" onclick="openTeacherModal()"><i class="fas fa-plus me-1"></i>ماموستا</button>
+                                <button class="btn btn-outline-info btn-sm" onclick="toggleTableView()" title="گوهورینا دیمەنێ خشتەی"><i class="fas fa-eye me-1"></i>دیمەنێ خشتەی</button>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-columns me-1"></i>پول</button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="addColumn()"><i class="fas fa-plus fa-fw me-2"></i>زیادکرنا پوله‌كێ</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="addMultipleColumns()"><i class="fas fa-layer-group fa-fw me-2"></i>زیادکرنا چه‌ند پولان</a></li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-success btn-sm" onclick="createSchedule()"><i class="fas fa-table me-1"></i>خشتێ نوی</button>
+                                <button class="btn btn-info btn-sm" onclick="openSettingsModal()"><i class="fas fa-cog me-1"></i>رێكخستن</button>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-dark dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-save me-1"></i>هیلان و ڤه‌گه‌راندن</button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="handleSaveLoad('save')"><i class="fas fa-file-download fa-fw me-2"></i>هیلان وه‌ك JSON</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="handleSaveLoad('load')"><i class="fas fa-file-upload fa-fw me-2"></i>ڤه‌گه‌راندن ژ JSON</a></li>
+                                    </ul>
+                                </div>
+                                 <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-print me-1"></i>چاپكرن</button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="printAllTables()"><i class="fas fa-print fa-fw me-2"></i>چاپكرنا هەمی خشتان</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="printDistributionTable()"><i class="fas fa-table fa-fw me-2"></i>چاپكرنا دابەشکرنێ ب تنێ</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="printComprehensiveDistribution()"><i class="fas fa-user-friends fa-fw me-2"></i>چاپكرنا راپۆرتا ماموستایان</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="printDistributionSimple()"><i class="fas fa-th-list fa-fw me-2"></i>چاپكرن ب سادەیی (بێ ناڤ)</a></li>
+                                    </ul>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-eraser me-1"></i>ژێبرن</button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="clearAllAssignments()"><i class="fas fa-eraser fa-fw me-2"></i>ڤالاکرنا دابەشکرنێ (حصص)</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="deleteAllData()"><i class="fas fa-exclamation-triangle fa-fw me-2"></i>ژێبرنا هەمی داتایان</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="search-panel"><input type="text" id="searchInput" class="form-control form-control-sm" placeholder="ل ناڤێ ماموستای بگه‌ره‌..."></div>
+                        </div>
+                        <div class="print-area">
+                            <div id="tableContainer" class="table-responsive"></div>
+                            <div id="additionalTablesContainer" class="mt-4"></div>
+                        </div>
+                    </div>
+                    <!-- Nisab Tab -->
+                    <div class="tab-pane fade" id="nisab-tab-pane" role="tabpanel">
+                        <!-- Nisab content will be rendered here by JS -->
+                    </div>
+                    <!-- Statistics Tab -->
+                    <div class="tab-pane fade" id="statistics-tab-pane" role="tabpanel">
+                        <!-- Statistics content will be rendered here by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Modal -->
+    <div class="modal fade" id="teacherModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="teacherModalTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="teacherForm"><input type="hidden" id="teacherId"><div class="row"><div class="col-lg-4 border-end"><h6 class="fw-bold">زانیاریێن ماموستای</h6>
+        <div class="mb-3"><label class="form-label">ناڤێ ماموستای</label><input type="text" class="form-control" id="teacherName" required></div>
+        <div class="mb-3"><label class="form-label">بروانامه</label>
+            <select id="teacherCertificateSelect" class="form-select" onchange="this.value==='یێن دی' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
+                <option>دبلوم</option><option>بكالوريوس</option><option>ماستر</option><option>دكتورا</option><option>یێن دی</option>
+            </select>
+            <input type="text" class="form-control mt-2" id="teacherCertificateOther" style="display: none;" placeholder="بروانامه‌یا دی بنڤیسە">
+        </div>
+        <div class="mb-3"><label class="form-label">نیشانا کاری</label>
+            <select id="teacherJobTitleSelect" class="form-select" onchange="this.value==='یێن دی' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
+                <option>رێڤه‌به‌ر</option><option>هاریكار</option><option>ماموستا</option><option>ماموستایێ گرێبه‌ست</option><option>یێن دی</option>
+            </select>
+            <input type="text" class="form-control mt-2" id="teacherJobTitleOther" style="display: none;" placeholder="نیشانا کاریا دی بنڤیسە">
+        </div>
+        <div class="mb-3"><label class="form-label">بسپور</label>
+            <select id="teacherSpecializationSelect" class="form-select" onchange="this.value==='یێن دی' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
+                <option>كوردی</option><option>بیركاری</option><option>ئێنگلێزی</option><option>عربی</option><option>زانست</option><option>ئاین</option><option>كومه‌لایه‌تی</option><option>كارامه‌ی</option><option>هونه‌ر</option><option>وه‌رزش</option><option>یێن دی</option>
+            </select>
+            <input type="text" class="form-control mt-2" id="teacherSpecializationOther" style="display: none;" placeholder="بسپوریا دی بنڤیسە">
+        </div>
+        <hr><h6 class="fw-bold">لیستا بابه‌تان</h6><div id="subjectsContainer"></div><button type="button" class="btn btn-outline-success btn-sm mt-2" id="addSubjectBtn"><i class="fas fa-plus me-1"></i> زیادکرنا بابه‌ت</button></div><div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center">
+                <p class="fw-bold mb-2">دابه‌شکرنا لسه‌ر پولان:</p>
+                <button type="button" class="btn btn-outline-secondary btn-sm mb-2" onclick="toggleModalLayout()" title="گوهورینا دیمه‌نێ دابه‌شکرنێ"><i class="fas fa-retweet me-1"></i>گوهورین</button>
+            </div>
+            <hr class="mt-2"><div id="teacherClassesContainer" style="max-height: 500px; overflow-y: auto;"></div></div></div></form></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">داخستن</button><button type="submit" form="teacherForm" class="btn btn-primary">پاشه‌كه‌وتكرن</button></div></div></div></div>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">رێكخستنێن گشتی</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="settingsForm">
+                        <div class="mb-3">
+                            <label for="principalName" class="form-label">ناڤێ رێڤه‌به‌ری</label>
+                            <input type="text" class="form-control" id="principalName" placeholder="ناڤێ رێڤه‌به‌ری بنڤیسە">
+                        </div>
+                        <hr>
+                        <h6 class="fw-bold">رێكخستنا خشتێن زێده‌</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="studentTableRows" class="form-label">هژمارا رێزێن خشتێ ئامارا قوتابیان</label>
+                                <input type="number" class="form-control" id="studentTableRows" min="1" max="15" value="6">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="leaveTableRows" class="form-label">هژمارا رێزێن خشتێ مۆله‌تێن ماموستایان</label>
+                                <input type="number" class="form-control" id="leaveTableRows" min="1" max="15" value="4">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">داخستن</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSettings()">پاشه‌كه‌وتكرن</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+    // --- Global Scope & Constants ---
+    let allSchedules = {};
+    let activeScheduleName = '';
+    let nextTeacherId = 1;
+    let teacherModalInstance = null;
+    let settingsModalInstance = null;
+    let tableViewMode = 'simple'; // 'simple' or 'detailed'
+    let modalLayoutMode = 'vertical'; // 'vertical' or 'horizontal'
+    let currentEditingTeacher = null;
+    
+    const PREDEFINED_SUBJECTS = ['كوردی', 'بیركاری', 'ئینگلیزی', 'زانست', 'عربی', 'كومه‌لایه‌تی', 'ئاين', 'كارامه‌ی', 'هونه‌ر', 'وه‌رزش'];
+    
+    // --- DOM Element Caching ---
+    const searchInput = document.getElementById('searchInput');
+    const themeSwitcher = document.getElementById('themeSwitcher');
+    const teacherModalEl = document.getElementById('teacherModal');
+    const settingsModalEl = document.getElementById('settingsModal');
+
+    // --- Utility Functions ---
+    const showToast = (message, icon = 'success') => { 
+        Swal.mixin({
+            toast: true, position: 'top-start', showConfirmButton: false, timer: 3000, timerProgressBar: true,
+            didOpen: (toast) => { toast.onmouseenter = Swal.stopTimer; toast.onmouseleave = Swal.resumeTimer; }
+        }).fire({ icon, title: message }); 
+    };
+    
+    // --- Core Data Management ---
+    function loadData() {
+        allSchedules = JSON.parse(localStorage.getItem('allSchedules')) || {};
+        activeScheduleName = localStorage.getItem('activeScheduleName') || '';
+        
+        if (Object.keys(allSchedules).length === 0) {
+            const defaultName = 'خشتێ سه‌ره‌كی';
+            allSchedules[defaultName] = { 
+                columns: ['١ج', '١د', '٢ج'], 
+                teachers: [{ id: 1, name: 'سمیر حسین محمود', certificate: 'دبلوم', jobTitle: 'ماموستا', specialization: 'كوردی', subjects: [{ name: 'كوردی', periods: 16 }, { name: 'ئاين', periods: 4 }], classes: { '١ج': { 'كوردی': 8, 'ئاين': 2 }, '١د': { 'كوردی': 8, 'ئاين': 2 } } }],
+                nisab: {},
+                settings: { principalName: 'مسعود لاوند تحلو', studentTableRows: 6, leaveTableRows: 4, studentTableData: [], leaveTableData: [] }
+            };
+            activeScheduleName = defaultName;
+        }
+        
+        if (!allSchedules[activeScheduleName]) activeScheduleName = Object.keys(allSchedules)[0];
+        
+        for (const scheduleName in allSchedules) {
+            const schedule = allSchedules[scheduleName];
+            schedule.nisab = schedule.nisab || {};
+            if (!schedule.settings) {
+                schedule.settings = { principalName: '', studentTableRows: 6, leaveTableRows: 4, studentTableData: [], leaveTableData: [] };
+            } else {
+                schedule.settings.studentTableData = schedule.settings.studentTableData || [];
+                schedule.settings.leaveTableData = schedule.settings.leaveTableData || [];
+            }
+        }
+        saveData();
+    }
+    
+    function saveData() { 
+        localStorage.setItem('allSchedules', JSON.stringify(allSchedules)); 
+        localStorage.setItem('activeScheduleName', activeScheduleName); 
+    }
+    
+    async function handleSaveLoad(action) {
+        if (action === 'save') {
+            const dataStr = JSON.stringify({ allSchedules, activeScheduleName });
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `schedules_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('زانیاری هاتنه‌ هیلان.');
+        } else if (action === 'load') {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.allSchedules && data.activeScheduleName) {
+                            allSchedules = data.allSchedules;
+                            activeScheduleName = data.activeScheduleName;
+                            saveData();
+                            showToast('زانیاری هاتنه‌ ڤه‌گه‌راندن.');
+                            location.reload();
+                        } else {
+                            throw new Error('Invalid file format');
+                        }
+                    } catch (err) {
+                        showToast('فایلا JSON نه‌درسته‌.', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+    }
+    
+    // --- App Rendering ---
+    function renderApp(filter = '') {
+        if (!activeScheduleName || !allSchedules[activeScheduleName]) return;
+        renderDistributionTable(filter);
+        renderAdditionalTables();
+        renderStatisticsTab(); 
+        renderNisabTab(); 
+    }
+    
+    // --- Distribution Tab Functions ---
+    function toggleTableView() {
+        tableViewMode = (tableViewMode === 'simple') ? 'detailed' : 'simple';
+        renderDistributionTable(searchInput.value);
+        showToast(`دیمەنێ خشتەی هاتە گوهورین بۆ: ${tableViewMode === 'detailed' ? 'ورده‌كاری' : 'سادە'}`, 'info');
+    }
+
+    function renderDistributionTable(filter = '') {
+        const schedule = allSchedules[activeScheduleName]; 
+        const container = document.getElementById('tableContainer');
+        nextTeacherId = schedule.teachers.length > 0 ? Math.max(...schedule.teachers.map(t => t.id || 0)) + 1 : 1;
+        
+        if (schedule.teachers.length === 0) {
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-user-plus fa-3x mb-3"></i><h5>خشتە ڤالایە</h5><p>ماموستایەکێ زێدە بکە.</p><button class="btn btn-primary" onclick="openTeacherModal()">زیادکرنا ماموستای</button></div>`;
+            return;
+        }
+        const filteredTeachers = schedule.teachers.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()));
+        
+        const teacherRowsHtml = filteredTeachers.map((teacher, index) => {
+            if (tableViewMode === 'detailed') {
+                return renderTeacherTbodyDetailed(teacher, schedule.columns, index);
+            } else {
+                return renderTeacherRowSimple(teacher, schedule.columns, index);
+            }
+        }).join('');
+        
+        let tableHTML = `<h4 class="text-center d-none print-only mb-3">دابەشکرنا وانان - ${activeScheduleName}</h4><table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr id="table-head-row">
+                    <th class="no-print"></th><th>ز</th><th>ناڤێ ماموستایان</th><th>بروانامه</th><th>نیشانا کاری</th><th>بسپور</th><th>بابه ت</th>
+                    ${schedule.columns.map(col => `<th class="column-header" data-col-name="${col}">${col}<button class="btn-delete-col no-print" onclick="deleteColumn('${col}')" title="ژێبرنا پولا"><i class="fas fa-trash-alt"></i></button></th>`).join('')}
+                    <th>ژ به‌هرا</th><th class="no-print">كاركردن</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">${teacherRowsHtml}</tbody>
+            <tfoot>${renderFooter(schedule)}</tfoot>
+        </table>`;
+        container.innerHTML = tableHTML;
+        
+        const selector = document.getElementById('scheduleSelector');
+        selector.innerHTML = Object.keys(allSchedules).map(name => `<option value="${name}" ${name === activeScheduleName ? 'selected' : ''}>${name}</option>`).join('');
+        selector.onchange = (e) => { activeScheduleName = e.target.value; saveData(); renderApp(searchInput.value); };
+        initSortable();
+    }
+    
+    function renderTeacherTbodyDetailed(teacher, columns, teacherIndex) {
+        const numSubjects = teacher.subjects.length || 1;
+        const rowspanAttr = `rowspan="${numSubjects}"`;
+        const totalDistributed = columns.reduce((s, c) => s + (teacher.classes?.[c] ? Object.values(teacher.classes[c]).reduce((a, b) => a + b, 0) : 0), 0);
+        
+        if (teacher.subjects.length === 0) {
+            return `<tbody data-teacher-id="${teacher.id}"><tr><td class="drag-handle no-print"><i class="fas fa-grip-vertical"></i></td><td>${teacherIndex + 1}</td><td>${teacher.name || ''}</td><td>${teacher.certificate || ''}</td><td>${teacher.jobTitle || ''}</td><td>${teacher.specialization || ''}</td><td></td>${columns.map(() => `<td></td>`).join('')}<td><span class="badge bg-primary fs-6">0</span></td><td class="no-print"><button class="btn btn-sm btn-outline-primary" onclick="openTeacherModal(${teacher.id})"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteTeacher(${teacher.id})"><i class="fas fa-trash"></i></button></td></tr></tbody>`;
+        }
+        
+        const subjectsHtml = teacher.subjects.map((subject, subjectIndex) => {
+            let rowHtml = '<tr>';
+            if (subjectIndex === 0) {
+                rowHtml += `<td ${rowspanAttr} class="drag-handle no-print"><i class="fas fa-grip-vertical"></i></td><td ${rowspanAttr}>${teacherIndex + 1}</td><td ${rowspanAttr}>${teacher.name || ''}</td><td ${rowspanAttr}>${teacher.certificate || ''}</td><td ${rowspanAttr}>${teacher.jobTitle || ''}</td><td ${rowspanAttr}>${teacher.specialization || ''}</td>`;
+            }
+            rowHtml += `<td>${subject.name}: ${subject.periods}</td>`;
+            columns.forEach(col => {
+                const periodsInClass = teacher.classes?.[col]?.[subject.name] || '';
+                rowHtml += `<td>${periodsInClass}</td>`;
+            });
+            if (subjectIndex === 0) {
+                rowHtml += `<td ${rowspanAttr}><span class="badge bg-primary fs-6">${totalDistributed}</span></td><td ${rowspanAttr} class="no-print"><button class="btn btn-sm btn-outline-primary" onclick="openTeacherModal(${teacher.id})"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteTeacher(${teacher.id})"><i class="fas fa-trash"></i></button></td>`;
+            }
+            rowHtml += '</tr>';
+            return rowHtml;
+        }).join('');
+        
+        return `<tbody data-teacher-id="${teacher.id}">${subjectsHtml}</tbody>`;
+    }
+
+    function renderTeacherRowSimple(teacher, columns, index) {
+        const distributed = columns.reduce((s, c) => s + (teacher.classes?.[c] ? Object.values(teacher.classes[c]).reduce((a, b) => a + b, 0) : 0), 0);
+        const teacherSubjects = teacher.subjects.length > 0 ? teacher.subjects : [{ name: '', periods: '' }];
+
+        const subjectsCellHtml = teacherSubjects.map(s => `<div class="subject-entry">${s.name ? `${s.name} (${s.periods})` : '&nbsp;'}</div>`).join('');
+
+        const classDistributionCellsHtml = columns.map(col => {
+            const cellContent = teacherSubjects.map(subject => {
+                const periods = subject.name ? teacher.classes?.[col]?.[subject.name] : undefined;
+                return `<div class="subject-entry">${periods ? `${subject.name}: ${periods}` : '&nbsp;'}</div>`;
+            }).join('');
+            return `<td class="class-distribution-cell-padded">${cellContent}</td>`;
+        }).join('');
+
+        return `<tbody data-teacher-id="${teacher.id}"><tr>
+            <td class="drag-handle no-print"><i class="fas fa-grip-vertical"></i></td><td>${index + 1}</td><td>${teacher.name || ''}</td><td>${teacher.certificate || ''}</td><td>${teacher.jobTitle || ''}</td><td>${teacher.specialization || ''}</td>
+            <td class="subjects-cell-padded">${subjectsCellHtml}</td>
+            ${classDistributionCellsHtml}
+            <td><span class="badge bg-primary fs-6">${distributed}</span></td>
+            <td class="no-print">
+                <button class="btn btn-sm btn-outline-primary" onclick="openTeacherModal(${teacher.id})"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteTeacher(${teacher.id})"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr></tbody>`;
+    }
+
+    function renderFooter(schedule) {
+        if (schedule.columns.length === 0) return '';
+        const totals = schedule.columns.map(c => schedule.teachers.reduce((s, t) => s + (t.classes?.[c] ? Object.values(t.classes[c]).reduce((a, b) => a + b, 0) : 0), 0));
+        const grandTotal = totals.reduce((a, b) => a + b, 0);
+        return `<tr class="table-light fw-bold"><td class="no-print"></td><td colspan="6" class="text-end">کۆی گشتی:</td>${totals.map(t => `<td>${t}</td>`).join('')}<td>${grandTotal}</td><td class="no-print"></td></tr>`;
+    }
+    
+    function handleStudentCellInput(cell) {
+        const row = cell.parentNode;
+        const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+        const colIndex = Array.from(row.children).indexOf(cell);
+
+        const boysCell = row.cells[3];
+        const girlsCell = row.cells[4];
+        const totalCell = row.cells[5];
+        const boys = parseInt(boysCell.innerText, 10) || 0;
+        const girls = parseInt(girlsCell.innerText, 10) || 0;
+        totalCell.innerText = boys + girls;
+
+        saveAdditionalTableData(cell, 'student', rowIndex, colIndex);
+        saveAdditionalTableData(totalCell, 'student', rowIndex, 5); 
+        
+        updateStudentTableFooter();
+    }
+    
+    function updateStudentTableFooter() {
+        const schedule = allSchedules[activeScheduleName];
+        const data = schedule.settings.studentTableData || [];
+        let totalBoys = 0, totalGirls = 0, grandTotal = 0;
+
+        data.forEach(row => {
+            totalBoys += parseInt(row[3], 10) || 0;
+            totalGirls += parseInt(row[4], 10) || 0;
+            // Recalculate grand total to ensure consistency
+            grandTotal += (parseInt(row[3], 10) || 0) + (parseInt(row[4], 10) || 0);
+        });
+        
+        document.getElementById('student-total-boys').innerText = totalBoys;
+        document.getElementById('student-total-girls').innerText = totalGirls;
+        document.getElementById('student-grand-total').innerText = grandTotal;
+    }
+
+    function renderAdditionalTables() {
+        const container = document.getElementById('additionalTablesContainer');
+        const schedule = allSchedules[activeScheduleName];
+        if (!schedule || !schedule.settings) {
+            container.innerHTML = ''; return;
+        }
+        const { principalName, studentTableRows, leaveTableRows, studentTableData = [], leaveTableData = [] } = schedule.settings;
+
+        const studentHeaders = ['ژ', 'پول', 'هوبە', 'کور', 'کچ', 'سەرجەم'];
+        let studentTableBody = '';
+        for(let r=0; r < studentTableRows; r++) {
+            let rowHTML = '<tr>';
+            for (let c=0; c < studentHeaders.length; c++) {
+                const content = (studentTableData[r] && studentTableData[r][c]) ? studentTableData[r][c] : '';
+                if (c === 3 || c === 4) {
+                    rowHTML += `<td contenteditable="true" oninput="handleStudentCellInput(this)" onblur="saveAdditionalTableData(this, 'student', ${r}, ${c})">${content}</td>`;
+                } else if (c === 5) {
+                    const boys = (studentTableData[r] && parseInt(studentTableData[r][3])) || 0;
+                    const girls = (studentTableData[r] && parseInt(studentTableData[r][4])) || 0;
+                    rowHTML += `<td>${boys + girls}</td>`;
+                } else {
+                    rowHTML += `<td contenteditable="true" onblur="saveAdditionalTableData(this, 'student', ${r}, ${c})">${content}</td>`;
+                }
+            }
+            rowHTML += `</tr>`;
+            studentTableBody += rowHTML;
+        }
+        
+        let totalBoys = 0, totalGirls = 0, grandTotal = 0;
+        studentTableData.forEach(row => {
+            totalBoys += parseInt(row[3], 10) || 0;
+            totalGirls += parseInt(row[4], 10) || 0;
+            grandTotal += (parseInt(row[3], 10) || 0) + (parseInt(row[4], 10) || 0);
+        });
+
+        const studentTable = `<table class="table table-bordered">
+            <thead><tr>${studentHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>${studentTableBody}</tbody>
+            <tfoot class="table-light fw-bold"><tr>
+                <td colspan="3">کۆی گشتی</td>
+                <td id="student-total-boys">${totalBoys}</td>
+                <td id="student-total-girls">${totalGirls}</td>
+                <td id="student-grand-total">${grandTotal}</td>
+            </tr></tfoot>
+        </table>`;
+        
+        const leaveHeaders = ['ژ', 'ناڤێ ماموستای', 'پسپوری', 'ژ بەروارا', 'هەتا بەروارا', 'ئەگەرێ مۆله‌تی'];
+        let leaveTable = `<table class="table table-bordered"><thead><tr>${leaveHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+        for(let r=0; r < leaveTableRows; r++) {
+             leaveTable += `<tr>`;
+             for (let c=0; c < leaveHeaders.length; c++) {
+                 const content = (leaveTableData[r] && leaveTableData[r][c]) ? leaveTableData[r][c] : '';
+                 leaveTable += `<td contenteditable="true" onblur="saveAdditionalTableData(this, 'leave', ${r}, ${c})">${content}</td>`;
+             }
+             leaveTable += `</tr>`;
+        }
+        leaveTable += `</tbody></table>`;
+
+        const managerSignature = `<div class="text-center" id="managerSignature"><p class="mb-1"><strong>کار پێ دهێت کرن ژ:</strong></p><p class="fw-bold mb-0">رێڤه‌به‌ر</p><p>${principalName || '.......'}</p></div>`;
+
+        container.innerHTML = `<div class="row mt-5">
+            <div class="col-lg-7 mb-4 mb-lg-0">${studentTable}</div>
+            <div class="col-lg-5 d-flex flex-column justify-content-between">${leaveTable}${managerSignature}</div>
+        </div>`;
+    }
+
+    function saveAdditionalTableData(cell, tableType, rowIndex, colIndex) {
+        const schedule = allSchedules[activeScheduleName];
+        const dataKey = tableType === 'student' ? 'studentTableData' : 'leaveTableData';
+        if (!schedule.settings[dataKey]) schedule.settings[dataKey] = [];
+        while (schedule.settings[dataKey].length <= rowIndex) {
+            schedule.settings[dataKey].push([]);
+        }
+        schedule.settings[dataKey][rowIndex][colIndex] = cell.innerText;
+        saveData();
+    }
+
+    // --- Printing Functions ---
+    const printStyleTemplate = `<style>body{font-family:"Noto Kufi Arabic",sans-serif;-webkit-print-color-adjust:exact!important;color-adjust:exact!important;}.table{width:100%;border-collapse:collapse;font-size:7pt}.table th,.table td{border:1px solid #ccc!important;padding:1px 2px;text-align:center;white-space:normal;vertical-align:middle;}.table thead th{background-color:#f2f2f2!important;font-weight:bold}.table .badge{background-color:transparent!important;color:inherit!important;border:none!important;padding:0!important;font-size:inherit!important;font-weight:normal!important;}thead{display:table-header-group}tfoot{display:table-footer-group}hr{margin:2px 0!important;border-top:1px solid #ccc!important;}#additionalTablesContainer .table{margin-top:25px!important;font-size:9pt;}#additionalTablesContainer .table td{height:30px;}#managerSignature{margin-top:40px;text-align:center;}@page{size:landscape;margin:.5cm}</style>`;
+
+    function printWithContent(title, contentHTML) {
+        const printWindow = window.open('', '', 'height=800,width=1200');
+        printWindow.document.write(`<html><head><title>${title}</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">${printStyleTemplate}</head><body dir="rtl">${contentHTML}</body></html>`);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 500);
+    }
+
+    function printAllTables() {
+        const printAreaNode = document.querySelector(".print-area");
+        if (!printAreaNode) { showToast('هیچ تشتەك نینە بۆ چاپکرنێ.', 'error'); return; }
+        
+        const printAreaClone = printAreaNode.cloneNode(true);
+        printAreaClone.querySelectorAll(".no-print, [contenteditable='true']").forEach(el => {
+            el.classList.add('d-none');
+            if (el.isContentEditable) el.removeAttribute('contenteditable');
+        });
+        printWithContent(`چاپكرنا خشتان - ${activeScheduleName}`, printAreaClone.innerHTML);
+    }
+    
+    function printDistributionTable() {
+        const tableNode = document.querySelector("#tableContainer table");
+        if (!tableNode) { showToast('هیچ خشتەیەک نیە بۆ چاپکردن.', 'error'); return; }
+        const tableClone = tableNode.cloneNode(true);
+        tableClone.querySelectorAll(".no-print").forEach(el => el.remove());
+        printWithContent('چاپکرنا دابەشکرنێ', `<h3>دابەشکرنا وانان - ${activeScheduleName}</h3>${tableClone.outerHTML}`);
+    }
+
+    function printComprehensiveDistribution() {
+        const schedule = allSchedules[activeScheduleName];
+        if (schedule.teachers.length === 0) { showToast('هیچ ماموستایه‌ك نیە بۆ چاپکردن.', 'error'); return; }
+        const columnTotals = schedule.columns.reduce((acc, col) => ({ ...acc, [col]: 0 }), {});
+        let totalDistributedOfAll = 0, tbodyHTML = '';
+        
+        schedule.teachers.forEach((teacher, index) => {
+            const numSubjects = teacher.subjects.length || 1;
+            const rowspanAttr = `rowspan="${numSubjects}"`;
+            const distributed = schedule.columns.reduce((s, c) => s + (teacher.classes?.[c] ? Object.values(teacher.classes[c]).reduce((a, b) => a + b, 0) : 0), 0);
+            totalDistributedOfAll += distributed;
+            schedule.columns.forEach(col => { if (teacher.classes?.[col]) { columnTotals[col] += Object.values(teacher.classes[col]).reduce((a, b) => a + b, 0); } });
+
+            if(teacher.subjects.length > 0) {
+                teacher.subjects.forEach((subject, subjectIndex) => {
+                    tbodyHTML += `<tr>`;
+                    if(subjectIndex === 0) {
+                        tbodyHTML += `<td ${rowspanAttr}>${index + 1}</td><td ${rowspanAttr} style="white-space:normal;">${teacher.name || ''}</td><td ${rowspanAttr}>${teacher.certificate || ''}</td><td ${rowspanAttr}>${teacher.specialization || ''}</td><td ${rowspanAttr}>${distributed}</td>`;
+                    }
+                    tbodyHTML += `<td style="white-space:normal;">${subject.name}: ${subject.periods}</td>`;
+                    schedule.columns.forEach(c => { tbodyHTML += `<td style="white-space:normal;">${teacher.classes?.[c]?.[subject.name] || ''}</td>` });
+                    tbodyHTML += `</tr>`;
+                });
+            } else {
+                 tbodyHTML += `<tr><td>${index + 1}</td><td style="white-space:normal;">${teacher.name || ''}</td><td>${teacher.certificate || ''}</td><td>${teacher.specialization || ''}</td><td>${distributed}</td><td></td>${schedule.columns.map(() => `<td></td>`).join('')}</tr>`;
+            }
+        });
+        const tfootHTML = `<tfoot class="table-light fw-bold"><tr> <td colspan="4" class="text-end">کۆی گشتی:</td> <td>${totalDistributedOfAll}</td> <td></td> ${schedule.columns.map(col => `<td>${columnTotals[col]}</td>`).join('')} </tr></tfoot>`;
+        const tableHTML = `<table class="table table-bordered table-striped"> <thead class="table-light"><tr><th>ز</th><th>ناڤێ ماموستای</th><th>بروانامه</th><th>بسپور</th><th>ژ به‌هرا</th><th>بابه‌ت</th>${schedule.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead> <tbody>${tbodyHTML}</tbody> ${tfootHTML} </table>`;
+        printWithContent(`راپۆرتا ماموستایان - ${activeScheduleName}`, `<h3>راپۆرتا ماموستایان - ${activeScheduleName}</h3>${tableHTML}`);
+    }
+    
+    function printDistributionSimple() {
+        const schedule = allSchedules[activeScheduleName];
+        if (schedule.teachers.length === 0) { showToast('هیچ ماموستایه‌ك نیە بۆ چاپکردن.', 'error'); return; }
+        let tableHTML = '<table class="table table-bordered table-striped">';
+        tableHTML += `<thead class="table-light"><tr><th>ز</th><th>ناڤێ ماموستایان</th><th>بروانامه</th><th>نیشانا کاری</th><th>بسپور</th><th>بابه ت</th>${schedule.columns.map(c => `<th>${c}</th>`).join('')}<th>ژ به‌هرا</th></tr></thead><tbody>`;
+        schedule.teachers.forEach((teacher, index) => {
+            const distributed = schedule.columns.reduce((s, c) => s + (teacher.classes?.[c] ? Object.values(teacher.classes[c]).reduce((a, b) => a + b, 0) : 0), 0);
+            const subjects = teacher.subjects.map(s => `<div>${s.name} (${s.periods})</div>`).join('');
+            tableHTML += `<tr><td>${index + 1}</td><td>${teacher.name || ''}</td><td>${teacher.certificate || ''}</td><td>${teacher.jobTitle || ''}</td><td>${teacher.specialization || ''}</td><td style="white-space:normal;">${subjects}</td>`;
+            schedule.columns.forEach(col => { 
+                const classContent = teacher.classes?.[col] ? Object.entries(teacher.classes[col]).map(([s, p]) => `${s}: ${p}`).join('<br>') : '';
+                tableHTML += `<td>${classContent}</td>`; 
+            });
+            tableHTML += `<td><span class="badge">${distributed}</span></td></tr>`;
+        });
+        const footerTotals = schedule.columns.map(c => schedule.teachers.reduce((s, t) => s + (t.classes?.[c] ? Object.values(t.classes[c]).reduce((a, b) => a + b, 0) : 0), 0));
+        tableHTML += `</tbody><tfoot class="table-light fw-bold"><tr><td colspan="6" class="text-end">کۆی گشتی:</td>${footerTotals.map(t => `<td>${t}</td>`).join('')}<td><span class="badge">${footerTotals.reduce((a,b)=>a+b,0)}</span></td></tr></tfoot></table>`;
+        printWithContent(`چاپکرنا دابەشکرنێ (سادە) - ${activeScheduleName}`, `<h3>دابەشکرنا وانان (سادە) - ${activeScheduleName}</h3>${tableHTML}`);
+    }
+    
+    // --- Modal and Data Entry Functions (Refactored with Async/Await) ---
+    async function createSchedule() {
+        const { value: scheduleName, isConfirmed } = await Swal.fire({
+            title: 'ناڤ بۆ خشتێ نوی', input: 'text', showCancelButton: true, confirmButtonText: 'چێكرن',
+            inputValidator: v => !v ? 'ناڤه‌كی بنڤیسە!' : allSchedules[v] ? 'ئه‌ڤ ناڤه‌ هه‌یه‌!' : null
+        });
+        if (isConfirmed && scheduleName) {
+            allSchedules[scheduleName] = { columns: [], teachers: [], nisab: {}, settings: { principalName: '', studentTableRows: 6, leaveTableRows: 4, studentTableData: [], leaveTableData: [] }};
+            activeScheduleName = scheduleName;
+            saveData();
+            renderApp();
+            showToast(`خشتێ "${scheduleName}" هاته‌ چێكرن.`);
+        }
+    }
+
+    async function renameActiveSchedule() {
+        const oldName = activeScheduleName;
+        if (!oldName) return;
+        const { value: newName, isConfirmed } = await Swal.fire({
+            title: 'گوهورینا ناڤێ خشتەی', input: 'text', inputValue: oldName, showCancelButton: true, confirmButtonText: 'پاشه‌كه‌وتكرن',
+            inputValidator: v => !v ? 'پێدڤیه‌ ناڤه‌كی بنڤیسی!' : (v !== oldName && allSchedules[v]) ? 'ئه‌ڤ ناڤه‌ پێشتر هه‌یه‌!' : null
+        });
+        if (isConfirmed && newName && newName !== oldName) {
+            allSchedules[newName] = allSchedules[oldName];
+            delete allSchedules[oldName];
+            activeScheduleName = newName;
+            saveData();
+            renderApp(searchInput.value);
+            showToast(`ناڤێ خشتەی هاته‌ گوهورین بۆ "${newName}".`);
+        }
+    }
+
+    async function deleteActiveSchedule() {
+        if (Object.keys(allSchedules).length <= 1) {
+            return showToast("ناتوانی دوایین خشتە بسڕیتەوە.", "error");
+        }
+        const { isConfirmed } = await Swal.fire({
+            title: `ژێبرنا خشتێ "${activeScheduleName}"`, text: "ئایا تو پشتراستی؟", icon: "warning",
+            showCancelButton: true, confirmButtonText: "بەلێ، ژێببە!", cancelButtonText: "نه‌خێر"
+        });
+        if (isConfirmed) {
+            delete allSchedules[activeScheduleName];
+            activeScheduleName = Object.keys(allSchedules)[0];
+            saveData();
+            renderApp();
+            showToast("خشتە هاته‌ ژێبرن.");
+        }
+    }
+    
+    async function deleteAllData() {
+        const { value: confirmationName, isConfirmed } = await Swal.fire({
+            title: "ژێبرنا هەمی داتایان!",
+            html: `ئەڤ کارە ناهێتە ڤەگەراندن و دێ هەمی خشتان ژێببەت.<br>بۆ پشتراستکرنێ، ناڤێ خشتێ چالاک بنڤیسە: <strong>${activeScheduleName}</strong>`,
+            icon: "warning", input: 'text', showCancelButton: true, confirmButtonText: "بەلێ، هەمیان ژێببە!", cancelButtonText: "نه‌خێر",
+            inputValidator: (value) => { if (value !== activeScheduleName) return 'ناڤێ تە نڤیسی راست نیە!'; }
+        });
+
+        if (isConfirmed && confirmationName === activeScheduleName) {
+            localStorage.clear();
+            allSchedules = {};
+            activeScheduleName = "";
+            loadData();
+            renderApp();
+            showToast("هەمی داتا هاتنه‌ ژێبرن.", "success");
+        }
+    }
+    
+    async function clearAllAssignments() {
+        const { isConfirmed } = await Swal.fire({
+            title: `ڤالاکرنا دابەشکرنێ`,
+            text: `ئایا تو پشتراستی كو دێ هه‌می وانه‌یێن دابه‌شكری لسه‌ر پولان ژێببەی؟ (ناڤێن ماموستا و پولان دێ مینن)`,
+            icon: "warning", showCancelButton: true, confirmButtonText: "بەلێ، ڤالاکە!", cancelButtonText: "نه‌خێر"
+        });
+        if (isConfirmed) {
+            allSchedules[activeScheduleName].teachers.forEach(teacher => { teacher.classes = {}; });
+            saveData();
+            renderApp(searchInput.value);
+            showToast("هه‌می وانه‌یێن دابه‌شكری هاتنه‌ ژێبرن.");
+        }
+    }
+
+    async function addColumn() {
+        const { value: className, isConfirmed } = await Swal.fire({
+            title: "زیادکرنا پولا نوی", input: "text", showCancelButton: true, confirmButtonText: "زیادکرن",
+            inputValidator: v => !v ? 'ناڤه‌كی بنڤیسە!' : allSchedules[activeScheduleName].columns.includes(v) ? 'ئه‌ڤ پوله‌ هه‌یه‌!' : null
+        });
+        if (isConfirmed && className) {
+            allSchedules[activeScheduleName].columns.push(className);
+            saveData();
+            renderApp(searchInput.value);
+            showToast("پول هاته‌ زیادكرن.");
+        }
+    }
+
+    async function addMultipleColumns() {
+        const { value: classNames, isConfirmed } = await Swal.fire({
+            title: 'زیادکرنا چه‌ند پولان',
+            html: `<textarea id="swal-classes-input" class="swal2-textarea" placeholder="ناڤێ پولا ١\nناڤێ پولا ٢"></textarea><small>هه‌ر ناڤه‌كی ل سه‌ر دێره‌كێ بنڤیسه‌.</small>`,
+            confirmButtonText: 'زیادکرن', showCancelButton: true,
+            preConfirm: () => document.getElementById('swal-classes-input').value.split('\n').map(s => s.trim()).filter(Boolean)
+        });
+        if (isConfirmed && classNames.length > 0) {
+            const schedule = allSchedules[activeScheduleName];
+            let addedCount = 0;
+            classNames.forEach(name => { if (!schedule.columns.includes(name)) { schedule.columns.push(name); addedCount++; } });
+            if (addedCount > 0) {
+                saveData();
+                renderApp(searchInput.value);
+                showToast(`${addedCount} پول هاتنه‌ زیادكرن.`);
+            } else {
+                showToast('هیچ پوله‌كا نوی نه‌هاته‌ دیتن.', 'info');
+            }
+        }
+    }
+
+    async function deleteColumn(colName) {
+        const { isConfirmed } = await Swal.fire({
+            title: `ژێبرنا پولا "${colName}"`, icon: "warning", showCancelButton: true, confirmButtonText: "بەلێ، ژێببە!"
+        });
+        if (isConfirmed) {
+            const schedule = allSchedules[activeScheduleName];
+            schedule.columns = schedule.columns.filter(c => c !== colName);
+            schedule.teachers.forEach(t => { if (t.classes?.[colName]) delete t.classes[colName]; });
+            saveData();
+            renderApp(searchInput.value);
+            showToast("پول هاته‌ ژێبرن.");
+        }
+    }
+    
+    function setupSelectWithOther(selectId, otherId, value) {
+        const selectElement = document.getElementById(selectId);
+        const otherElement = document.getElementById(otherId);
+        const options = Array.from(selectElement.options).map(opt => opt.value);
+        if (value && options.includes(value)) {
+            selectElement.value = value;
+            otherElement.style.display = 'none'; otherElement.value = '';
+        } else if (value) {
+            selectElement.value = 'یێن دی';
+            otherElement.style.display = 'block'; otherElement.value = value;
+        } else {
+            selectElement.selectedIndex = 0;
+            otherElement.style.display = 'none'; otherElement.value = '';
+        }
+    }
+
+    function openTeacherModal(teacherId = null) {
+        if (!teacherModalInstance) {
+            teacherModalInstance = new bootstrap.Modal(teacherModalEl);
+        }
+        const schedule = allSchedules[activeScheduleName];
+        const teacher = teacherId ? schedule.teachers.find(t => t.id === teacherId) : null;
+        currentEditingTeacher = teacher;
+
+        document.getElementById("teacherModalTitle").textContent = teacher ? "نوژه‌نكرنا ماموستای" : "زیادکرنا ماموستای";
+        const form = document.getElementById("teacherForm");
+        form.reset();
+        document.getElementById("teacherId").value = teacher?.id || "";
+        document.getElementById("teacherName").value = teacher?.name || "";
+        
+        setupSelectWithOther('teacherCertificateSelect', 'teacherCertificateOther', teacher?.certificate);
+        setupSelectWithOther('teacherJobTitleSelect', 'teacherJobTitleOther', teacher?.jobTitle);
+        setupSelectWithOther('teacherSpecializationSelect', 'teacherSpecializationOther', teacher?.specialization);
+        
+        const subjectsContainer = document.getElementById("subjectsContainer");
+        subjectsContainer.innerHTML = "";
+        const subjects = teacher?.subjects?.length ? teacher.subjects : [{name: "", periods: ""}];
+        subjects.forEach(s => addSubjectRow(s));
+
+        document.getElementById("addSubjectBtn").onclick = () => addSubjectRow();
+        
+        document.getElementById("teacherClassesContainer").innerHTML = '';
+        updateClassInputsInModal(teacher);
+        
+        form.onsubmit = (ev) => { ev.preventDefault(); saveTeacherData(teacher?.id); };
+        teacherModalInstance.show();
+    }
+
+    function addSubjectRow(subject = {name: "", periods: ""}) {
+        const row = document.createElement("div");
+        row.className = "d-flex gap-2 mb-2 subject-row";
+        const uniqueId = 'subject_' + Date.now() + Math.random().toString(36).substr(2, 9);
+        const isOther = subject.name && !PREDEFINED_SUBJECTS.includes(subject.name);
+        
+        const subjectInputHTML = `<div class="flex-grow-1">
+            <select class="form-select form-select-sm subject-select" onchange="document.getElementById('${uniqueId}_other').style.display = this.value === 'یێن دی' ? 'block' : 'none'; updateClassInputsInModal(currentEditingTeacher);">
+                ${PREDEFINED_SUBJECTS.map(s => `<option value="${s}" ${subject.name === s ? 'selected' : ''}>${s}</option>`).join('')}
+                <option value="یێن دی" ${isOther ? 'selected' : ''}>یێن دی</option>
+            </select>
+            <input type="text" class="form-control form-control-sm mt-1 subject-other-input" id="${uniqueId}_other" style="display: ${isOther ? 'block' : 'none'};" placeholder="بابه‌تێ دی بنڤیسە" value="${isOther ? subject.name : ''}">
+        </div>`;
+        
+        row.innerHTML = `<button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.subject-row').remove(); updateClassInputsInModal(currentEditingTeacher);"><i class="fas fa-times"></i></button>
+                         ${subjectInputHTML}
+                         <input type="number" class="form-control form-control-sm subject-periods-input" value="${subject.periods || ''}" placeholder="حصص" min="0" style="max-width: 70px;" readonly>`;
+        
+        document.getElementById("subjectsContainer").appendChild(row);
+    }
+
+    function toggleModalLayout() {
+        modalLayoutMode = (modalLayoutMode === 'vertical') ? 'horizontal' : 'vertical';
+        updateClassInputsInModal(currentEditingTeacher);
+    }
+
+    function updateSubjectPeriodsFromClasses() {
+        const subjectRows = document.querySelectorAll("#subjectsContainer .subject-row");
+        subjectRows.forEach(row => {
+            const subjectName = getSubjectNameFromRow(row);
+            const periodsInput = row.querySelector('.subject-periods-input');
+            if (!subjectName || !periodsInput) return;
+
+            let totalPeriods = 0;
+            const classInputs = document.querySelectorAll(`#teacherClassesContainer input[data-subject-name="${subjectName}"]`);
+            classInputs.forEach(input => { totalPeriods += parseInt(input.value) || 0; });
+
+            periodsInput.value = totalPeriods > 0 ? totalPeriods : "";
+        });
+    }
+    
+    function getSubjectNameFromRow(row) {
+        const select = row.querySelector('.subject-select');
+        return select.value === 'یێن دی' ? row.querySelector('.subject-other-input').value.trim() : select.value;
+    }
+
+    function isSubjectAlreadyAssignedToClass(subjectName, className, currentTeacherId) {
+        const schedule = allSchedules[activeScheduleName];
+        for (const teacher of schedule.teachers) {
+            if (teacher.id !== currentTeacherId && teacher.classes?.[className]?.[subjectName] > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    function updateClassCardHeader(inputElement) {
+        const cardBody = inputElement.closest('.card-body');
+        if (!cardBody) return;
+        const header = cardBody.querySelector('h6');
+        const totalPeriods = Array.from(cardBody.querySelectorAll("input[type='number']")).reduce((sum, inp) => sum + (parseInt(inp.value) || 0), 0);
+        let checkmark = header.querySelector('.assignment-checkmark');
+        if (totalPeriods > 0) {
+            if (!checkmark) header.insertAdjacentHTML('beforeend', ' <i class="fas fa-check-circle text-success ms-2 assignment-checkmark"></i>');
+        } else {
+            checkmark?.remove();
+        }
+    }
+
+    // --- **MAJOR FIX in this function** ---
+    function updateClassInputsInModal(teacher = null) {
+        const schedule = allSchedules[activeScheduleName];
+        const container = document.getElementById("teacherClassesContainer");
+        const currentTeacherId = parseInt(document.getElementById('teacherId').value) || nextTeacherId;
+
+        // Step 1: Preserve the current (unsaved) values from the input fields before redrawing.
+        const transientClassValues = {};
+        container.querySelectorAll("input[type='number'][data-class-name]").forEach(input => {
+            const { className, subjectName } = input.dataset;
+            const value = parseInt(input.value, 10);
+            if (value > 0) {
+                if (!transientClassValues[className]) transientClassValues[className] = {};
+                transientClassValues[className][subjectName] = value;
+            }
+        });
+
+        // Get the current list of subjects from the subject rows.
+        const subjectNames = Array.from(document.querySelectorAll("#subjectsContainer .subject-row")).map(getSubjectNameFromRow).filter(Boolean);
+
+        // Step 2: Rebuild the HTML, using the preserved values.
+        if (modalLayoutMode === 'vertical') {
+            const columnsHTML = schedule.columns.map(colName => {
+                let inputsHTML = subjectNames.map(subName => {
+                    // Step 3: Restore state. Prioritize transient (unsaved) values, then fall back to saved data.
+                    const value = transientClassValues?.[colName]?.[subName] || teacher?.classes?.[colName]?.[subName] || "";
+                    const isOtherAssigned = isSubjectAlreadyAssignedToClass(subName, colName, currentTeacherId);
+                    const warningIcon = isOtherAssigned ? `<i class="fas fa-exclamation-triangle text-warning" title="ئه‌ڤ بابه‌ته‌ بۆ ڤێ پولێ ژلایێ ماموستایه‌كێ دی ڤه‌ هاتیه‌ دانان"></i>` : '';
+                    return `<div class="mb-2"><label class="form-label d-flex justify-content-between">${subName}<span>${warningIcon}</span></label><input type="number" class="form-control form-control-sm" data-class-name="${colName}" data-subject-name="${subName}" value="${value}" min="0"></div>`;
+                }).join('');
+
+                if (subjectNames.length === 0) {
+                    inputsHTML = '<div class="text-center text-muted small p-2">زیادکرنا بابه‌ت ژ لیستا لایێ چه‌پێ</div>';
+                }
+
+                const hasAssignments = subjectNames.some(subName => (transientClassValues?.[colName]?.[subName] > 0) || (teacher?.classes?.[colName]?.[subName] > 0));
+                const assignedMark = hasAssignments ? '<i class="fas fa-check-circle text-success ms-2 assignment-checkmark"></i>' : '';
+                
+                return `<div class="col-md-6 mb-3"><div class="card card-body h-100"><h6>پولا ${colName}${assignedMark}</h6>${inputsHTML}</div></div>`;
+            }).join('');
+            container.innerHTML = `<div class="row">${columnsHTML}</div>`;
+        } else { // Horizontal Mode
+            let tableContent;
+            if (subjectNames.length === 0) {
+                tableContent = '<tr><td colspan="100%" class="text-center text-muted p-3">زیادکرنا بابه‌ت ژ لیستا لایێ چه‌پێ</td></tr>';
+            } else {
+                tableContent = subjectNames.map(subName => `<tr><td class="fw-bold">${subName}</td>${schedule.columns.map(colName => {
+                    const value = transientClassValues?.[colName]?.[subName] || teacher?.classes?.[colName]?.[subName] || "";
+                    return `<td><input type="number" class="form-control form-control-sm mx-auto" style="width: 70px;" data-class-name="${colName}" data-subject-name="${subName}" value="${value}" min="0"></td>`;
+                }).join('')}</tr>`).join('');
+            }
+            container.innerHTML = `<div class="table-responsive"><table class="table table-bordered table-sm text-center"><thead><tr><th>بابەت</th>${schedule.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${tableContent}</tbody></table></div>`;
+        }
+
+        // Step 4: Re-attach event listeners to the new inputs.
+        container.querySelectorAll("input[type='number']").forEach(input => { 
+            input.addEventListener('input', (event) => { 
+                if (modalLayoutMode === 'vertical') updateClassCardHeader(event.target); 
+                updateSubjectPeriodsFromClasses();
+            }); 
+        });
+        updateSubjectPeriodsFromClasses();
+    }
+    
+    function getSelectValue(selectId, otherId) {
+        const select = document.getElementById(selectId);
+        return select.value === 'یێن دی' ? document.getElementById(otherId).value : select.value;
+    }
+
+    function saveTeacherData(teacherId = null) {
+        if (!document.getElementById("teacherName").value) return showToast("ناڤێ ماموستای بنڤیسە.", "error");
+        
+        const teacherData = {
+            id: teacherId ? parseInt(teacherId, 10) : nextTeacherId,
+            name: document.getElementById("teacherName").value,
+            certificate: getSelectValue('teacherCertificateSelect', 'teacherCertificateOther'),
+            jobTitle: getSelectValue('teacherJobTitleSelect', 'teacherJobTitleOther'),
+            specialization: getSelectValue('teacherSpecializationSelect', 'teacherSpecializationOther'),
+            subjects: [], classes: {}
+        };
+        
+        // **FIX**: The source of truth for saving is now the class inputs.
+        // This automatically handles removing subjects if all their periods are set to 0.
+        const finalSubjects = {};
+        document.querySelectorAll("#teacherClassesContainer input[type='number']").forEach(input => {
+            const periods = parseInt(input.value, 10) || 0;
+            if (periods > 0) {
+                const { className, subjectName } = input.dataset;
+                if (!teacherData.classes[className]) teacherData.classes[className] = {};
+                teacherData.classes[className][subjectName] = periods;
+                finalSubjects[subjectName] = (finalSubjects[subjectName] || 0) + periods;
+            }
+        });
+
+        teacherData.subjects = Object.entries(finalSubjects).map(([name, periods]) => ({ name, periods }));
+
+        const schedule = allSchedules[activeScheduleName];
+        const teacherIndex = schedule.teachers.findIndex(t => t.id === teacherData.id);
+        if (teacherIndex > -1) {
+            schedule.teachers[teacherIndex] = teacherData;
+        } else {
+            schedule.teachers.push(teacherData);
+            nextTeacherId++;
+        }
+        
+        saveData();
+        teacherModalInstance.hide();
+        renderApp(searchInput.value);
+        showToast("زانیاری هاتنه‌ پاشه‌كه‌وتكرن.");
+    }
+
+    async function deleteTeacher(teacherId) {
+        const { isConfirmed } = await Swal.fire({
+            title: "ژێبرنا ماموستای", text: "ئایا تو پشتراستی؟", icon: "warning",
+            showCancelButton: true, confirmButtonText: "بەلێ، ژێببە!"
+        });
+        if (isConfirmed) {
+            allSchedules[activeScheduleName].teachers = allSchedules[activeScheduleName].teachers.filter(t => t.id !== teacherId);
+            saveData();
+            renderApp(searchInput.value);
+            showToast("ماموستا هاته‌ ژێبرن.");
+        }
+    }
+    
+    // --- Settings Modal Functions ---
+    function openSettingsModal() {
+        if (!settingsModalInstance) settingsModalInstance = new bootstrap.Modal(settingsModalEl);
+        const settings = allSchedules[activeScheduleName].settings;
+        document.getElementById('principalName').value = settings.principalName || '';
+        document.getElementById('studentTableRows').value = settings.studentTableRows || 6;
+        document.getElementById('leaveTableRows').value = settings.leaveTableRows || 4;
+        settingsModalInstance.show();
+    }
+
+    function saveSettings() {
+        const settings = allSchedules[activeScheduleName].settings;
+        settings.principalName = document.getElementById('principalName').value;
+        settings.studentTableRows = parseInt(document.getElementById('studentTableRows').value) || 6;
+        settings.leaveTableRows = parseInt(document.getElementById('leaveTableRows').value) || 4;
+        saveData();
+        renderAdditionalTables();
+        settingsModalInstance.hide();
+        showToast('رێكخستن هاتنه‌ پاشه‌كه‌وتكرن.');
+    }
+    
+    // --- Initializers ---
+    function initSortable() {
+        const schedule = allSchedules[activeScheduleName];
+        const tableBody = document.getElementById("table-body");
+        if (tableBody) new Sortable(tableBody, {
+            animation: 150, handle: ".drag-handle", ghostClass: "sortable-ghost",
+            onEnd: (evt) => {
+                const reorderedTeachers = Array.from(evt.target.children)
+                    .map(tbody => schedule.teachers.find(t => t.id === parseInt(tbody.dataset.teacherId)))
+                    .filter(Boolean);
+                schedule.teachers = reorderedTeachers;
+                saveData();
+                renderDistributionTable(searchInput.value);
+            }
+        });
+        
+        const tableHead = document.getElementById("table-head-row");
+        if (tableHead) new Sortable(tableHead, {
+            animation: 150, filter: ".no-print, .btn-delete-col", ghostClass: "sortable-ghost",
+            onEnd: () => {
+                schedule.columns = Array.from(tableHead.querySelectorAll(".column-header")).map(th => th.dataset.colName);
+                saveData();
+                renderApp(searchInput.value);
+            }
+        });
+    }
+    
+    // --- Event Listeners & App Start ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const mainContainer = document.querySelector('.main-container');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const startButton = document.getElementById('startButton');
+        const welcomeCard = document.querySelector('.welcome-card');
+
+        if (sessionStorage.getItem('hasVisitedInSession')) {
+            welcomeScreen.style.display = 'none';
+            mainContainer.style.display = 'block';
+        } else {
+            if(welcomeScreen && welcomeCard) {
+                welcomeScreen.addEventListener('mousemove', (e) => {
+                    const { left, top, width, height } = welcomeScreen.getBoundingClientRect();
+                    const x = (e.clientX - left) / width - 0.5;
+                    const y = (e.clientY - top) / height - 0.5;
+                    welcomeCard.style.transform = `rotateX(${-y * 20}deg) rotateY(${x * 20}deg) scale(1.05)`;
+                });
+                welcomeScreen.addEventListener('mouseleave', () => {
+                    welcomeCard.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
+                });
+            }
+        }
+
+        startButton?.addEventListener('click', () => {
+            sessionStorage.setItem('hasVisitedInSession', 'true');
+            welcomeScreen.classList.add('hidden');
+            setTimeout(() => { mainContainer.style.display = 'block'; }, 600); 
+        });
+        
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-bs-theme', savedTheme);
+        themeSwitcher.checked = savedTheme === 'dark';
+
+        loadData();
+        renderApp();
+    });
+
+    searchInput.addEventListener('input', (e) => renderDistributionTable(e.target.value));
+    themeSwitcher.addEventListener('change', () => { 
+        const theme = themeSwitcher.checked ? 'dark' : 'light'; 
+        document.body.setAttribute('data-bs-theme', theme); 
+        localStorage.setItem('theme', theme); 
+    });
+    
+    [teacherModalEl, settingsModalEl].forEach(modalEl => {
+        modalEl.addEventListener('show.bs.modal', () => document.body.classList.add('modal-open'));
+        modalEl.addEventListener('hidden.bs.modal', () => document.body.classList.remove('modal-open'));
+    });
+
+    document.querySelector('#statistics-tab')?.addEventListener('shown.bs.tab', renderStatisticsTab);
+    document.querySelector('#nisab-tab')?.addEventListener('shown.bs.tab', renderNisabTab);
+    
+    // Unchanged Functions (Statistics & Nisab Rendering)
+    function getGradeFromClassName(className) { if (!className) return null; const match = className.match(/[٠-٩0-9]+/); return match ? match[0] : null; }
+    function renderNisabTab() { const container = document.getElementById('nisab-tab-pane'); const schedule = allSchedules[activeScheduleName]; const teacherSubjects = new Set(schedule.teachers.flatMap(t => t.subjects.map(s => s.name))); const allSubjects = [...new Set([...PREDEFINED_SUBJECTS, ...teacherSubjects])].sort(); const allGrades = [...new Set(schedule.columns.map(getGradeFromClassName).filter(Boolean))].sort(); if (allGrades.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-tasks fa-3x mb-3"></i><h5>پشکا نصابی ڤالایە</h5><p>پێدڤیه‌ پولان زیاد بكه‌ی دا بشێی نصابا وانان دیار بكه‌ی.</p></div>`; return; } let tableHTML = `<div class="d-flex justify-content-between align-items-center my-3"><h5 class="mb-0">دیارکرنا حصصێن پێدڤی بۆ هەر قۆناغەکێ</h5><button class="btn btn-info btn-sm" onclick="applyNisab()"><i class="fas fa-magic me-2"></i>جێبەجێکرنا نصابی لسەر خشتەی</button></div><div class="table-responsive"><table class="table table-bordered nisab-table"><thead class="table-light"><tr><th>بابەت / قۆناغ</th>${allGrades.map(g => `<th>قۆناغا ${g}</th>`).join('')}</tr></thead><tbody>${allSubjects.map(s => `<tr><td class="fw-bold">${s}</td>${allGrades.map(g => `<td><input type="number" class="form-control form-control-sm mx-auto" min="0" data-subject="${s}" data-grade="${g}" value="${schedule.nisab?.[s]?.[g] || ''}" onchange="saveNisabValue(this)"></td>`).join('')}</tr>`).join('')}</tbody></table></div>`; container.innerHTML = tableHTML; }
+    function saveNisabValue(input) { const schedule = allSchedules[activeScheduleName]; const { subject, grade } = input.dataset; const value = parseInt(input.value); if (!schedule.nisab[subject]) schedule.nisab[subject] = {}; if (value > 0) schedule.nisab[subject][grade] = value; else delete schedule.nisab[subject][grade]; saveData(); }
+    async function applyNisab() { const { isConfirmed } = await Swal.fire({ title: 'جێبەجێکرنا نصابی', text: 'ئەڤ کارە دێ هەمی وانەیان لسەر پولان دابەش کەت لدویڤ نصابا تە دیارکری. بتنێ ئەو وانە دێ هێنە زێدەکرن یێن کو هەتا نوکە نەهاتینە دابەشکرن. ئایا پشتراستی؟', icon: 'info', showCancelButton: true, confirmButtonText: 'بەلێ، جێبەجێ بکە', cancelButtonText: 'نەخێر' }); if (isConfirmed) { const schedule = allSchedules[activeScheduleName]; let successLog = []; let warningLog = []; for (const subject in schedule.nisab) { for (const grade in schedule.nisab[subject]) { const periods = schedule.nisab[subject][grade]; if (!periods || periods <= 0) continue; let teacher = schedule.teachers.find(t => t.specialization === subject && t.subjects.some(s => s.name === subject)) || schedule.teachers.find(t => t.subjects.some(s => s.name === subject)); if (!teacher) { warningLog.push(`- هیچ ماموستایەک نەهاتە دیتن بۆ بابەتا "${subject}".`); continue; } const targetClasses = schedule.columns.filter(c => getGradeFromClassName(c) === grade); targetClasses.forEach(className => { if (!schedule.teachers.some(t => t.classes?.[className]?.[subject] > 0)) { teacher.classes = teacher.classes || {}; teacher.classes[className] = teacher.classes[className] || {}; teacher.classes[className][subject] = periods; successLog.push(`- ${periods} وانە ژ بابەتا "${subject}" بۆ پولا "${className}" هاتە دانان بۆ ماموستا "${teacher.name}".`); } }); } } saveData(); renderApp(searchInput.value); let summaryHTML = ''; if (successLog.length > 0) summaryHTML += `<h6>کارێن هاتینەکرن:</h6><ul class="text-start">${successLog.map(s => `<li>${s}</li>`).join('')}</ul>`; if (warningLog.length > 0) summaryHTML += `<h6 class="mt-3">تێبینی:</h6><ul class="text-start">${warningLog.map(w => `<li>${w}</li>`).join('')}</ul>`; if (summaryHTML === '') summaryHTML = 'هیچ گوهورینەکا نوی روو نەدا. هەمی وانە لدویڤ نصابی هاتبوونە دابەشکرن.'; Swal.fire('ئەنجام', summaryHTML, successLog.length > 0 ? 'success' : 'warning'); } }
+    function renderStatisticsTab() { const container = document.getElementById('statistics-tab-pane'); const schedule = allSchedules[activeScheduleName]; if (!schedule || schedule.teachers.length === 0 || schedule.columns.length === 0) { container.innerHTML = '<div class="p-4"><div class="alert alert-warning">هیچ داتایه‌ك نینه‌ بۆ نیشاندانێ. پێدڤیه‌ ماموستا و پولان و وانان دابه‌ش بكه‌ی.</div></div>'; return; } const allSubjects = [...new Set([...PREDEFINED_SUBJECTS, ...new Set(schedule.teachers.flatMap(t => t.subjects.map(s => s.name)))])].sort(); const subjectStatus = allSubjects.map(subject => { const required = Object.entries(schedule.nisab[subject] || {}).reduce((sum, [grade, periods]) => sum + (periods * schedule.columns.filter(c => getGradeFromClassName(c) === grade).length), 0); const distributed = schedule.teachers.reduce((sum, t) => sum + schedule.columns.reduce((subSum, col) => subSum + (t.classes?.[col]?.[subject] || 0), 0), 0); return { name: subject, required, distributed }; }).filter(s => s.required > 0 || s.distributed > 0); const totalNisabRequired = subjectStatus.reduce((sum, s) => sum + s.required, 0); const totalDistributed = subjectStatus.reduce((sum, s) => sum + s.distributed, 0); const classDetails = schedule.columns.reduce((acc, colName) => { acc[colName] = { total: 0, subjects: {} }; schedule.teachers.forEach(t => { if (t.classes?.[colName]) { for(const subject in t.classes[colName]){ const periods = t.classes[colName][subject]; acc[colName].total += periods; acc[colName].subjects[subject] = (acc[colName].subjects[subject] || 0) + periods; } } }); return acc; }, {}); let distributionDetails = []; schedule.teachers.forEach(t => { for (const cN in t.classes) { for (const sN in t.classes[cN]) { if (t.classes[cN][sN] > 0) { distributionDetails.push({ className: cN, subjectName: sN, teacherName: t.name, periods: t.classes[cN][sN] }); } } } }); distributionDetails.sort((a,b) => a.className.localeCompare(b.className) || a.subjectName.localeCompare(b.subjectName)); const progressPercentage = totalNisabRequired > 0 ? (totalDistributed/totalNisabRequired)*100 : 0;
+    let contentHTML = `<div class="p-2"><ul class="nav nav-tabs nav-fill mb-3" role="tablist"><li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#stats-summary-pane" type="button"><i class="fas fa-tachometer-alt me-2"></i>خلاصة گشتی</button></li><li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#stats-teachers-pane" type="button"><i class="fas fa-chalkboard-teacher me-2"></i>دۆخی ماموستایان</button></li><li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#stats-subjects-pane" type="button"><i class="fas fa-book me-2"></i>دۆخی وانه‌کان</button></li><li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#stats-classes-pane" type="button"><i class="fas fa-school me-2"></i>دۆخی پۆله‌کان</button></li></ul>
+    <div class="tab-content p-2"><div class="tab-pane fade show active" id="stats-summary-pane" role="tabpanel"><h4 class="mb-3">خلاصة گشتی يا دابەشکرنێ</h4><div class="row text-center"><div class="col-md-4 mb-3"><div class="card shadow-sm h-100"><div class="card-body"><h6 class="card-title text-uppercase text-secondary">کۆی گشتی وانەیێن پێدڤی</h6><p class="fs-1 fw-bold text-primary mb-0">${totalNisabRequired}</p></div></div></div><div class="col-md-4 mb-3"><div class="card shadow-sm h-100"><div class="card-body"><h6 class="card-title text-uppercase text-secondary">وانەیێن دابەشکری</h6><p class="fs-1 fw-bold text-success mb-0">${totalDistributed}</p></div></div></div><div class="col-md-4 mb-3"><div class="card shadow-sm h-100"><div class="card-body"><h6 class="card-title text-uppercase text-secondary">وانەیێن ماین</h6><p class="fs-1 fw-bold text-danger mb-0">${totalNisabRequired - totalDistributed}</p></div></div></div></div><hr class="my-4"><h5 class="text-center">رێژا ته‌واوبوونێ</h5><div class="progress" style="height: 30px; font-size: 1rem;"><div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: ${progressPercentage}%">${Math.round(progressPercentage)}%</div></div></div>
+    <div class="tab-pane fade" id="stats-teachers-pane" role="tabpanel"><h4 class="mb-3">ورده‌كاری دابه‌شکرنا ماموستایان</h4><div class="row">${schedule.teachers.map((t) => { const required = t.subjects.reduce((sum, s) => sum + s.periods, 0); const distributed = Object.values(t.classes || {}).reduce((subSum, classObj) => subSum + Object.values(classObj).reduce((pSum, p) => pSum + p, 0), 0); const diff = distributed - required; let badgeClass = 'bg-success-subtle text-success-emphasis'; let statusText = 'تەواو'; if (diff < 0) { badgeClass = 'bg-warning-subtle text-warning-emphasis'; statusText = `نه‌ته‌واو (${-diff} ماینە)`; } else if (diff > 0) { badgeClass = 'bg-danger-subtle text-danger-emphasis'; statusText = `زێده‌ (${diff} زێدەنە)`; } const percentage = required > 0 ? Math.round((distributed / required) * 100) : (distributed > 0 ? 101 : 0); let progressClass = 'bg-success'; if (percentage > 100) progressClass = 'bg-danger'; else if (percentage < 100) progressClass = 'bg-warning'; const teacherAssignments = distributionDetails.filter(d => d.teacherName === t.name); let teacherDetailsHTML = teacherAssignments.length > 0 ? `<div class="table-responsive" style="max-height: 200px;"><table class="table table-sm table-hover"><thead><tr><th>پول</th><th>بابەت</th><th>وانە</th></tr></thead><tbody>${teacherAssignments.map(d => `<tr><td>${d.className}</td><td>${d.subjectName}</td><td>${d.periods}</td></tr>`).join('')}</tbody></table></div>` : `<div class="text-center p-3 text-muted">هیچ وانه‌یه‌ك نینه‌.</div>`; return `<div class="col-xl-6 mb-4"><div class="card h-100 shadow-sm"><div class="card-header d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold"><i class="fas fa-user-tie me-2 text-primary"></i> ${t.name}</h6><span class="badge rounded-pill ${badgeClass}">${statusText}</span></div><div class="card-body p-3"><div class="row"><div class="col-sm-6"><ul class="list-unstyled small"><li class="mb-2"><i class="fas fa-award fa-fw me-2 text-muted"></i><strong>بروانامه:</strong> ${t.certificate||'N/A'}</li><li class="mb-2"><i class="fas fa-briefcase fa-fw me-2 text-muted"></i><strong>نیشانا کاری:</strong> ${t.jobTitle||'N/A'}</li><li class="mb-2"><i class="fas fa-atom fa-fw me-2 text-muted"></i><strong>بسپور:</strong> ${t.specialization||'N/A'}</li></ul></div><div class="col-sm-6"><ul class="list-unstyled small"><li class="mb-2 d-flex justify-content-between"><span><i class="fas fa-bullseye fa-fw me-2 text-muted"></i><strong>پێدڤی:</strong></span> <span class="fw-bold">${required}</span></li><li class="mb-2 d-flex justify-content-between"><span><i class="fas fa-check-circle fa-fw me-2 text-muted"></i><strong>دابەشکری:</strong></span> <span class="fw-bold">${distributed}</span></li><li class="mb-2 d-flex justify-content-between"><span><i class="fas fa-exchange-alt fa-fw me-2 text-muted"></i><strong>جیاوازی:</strong></span> <span class="fw-bold ${diff<0?'text-warning':(diff>0?'text-danger':'text-success')}">${diff>0?`+${diff}`:diff}</span></li></ul></div></div><div class="progress mt-1" style="height:10px;"><div class="progress-bar ${progressClass}" role="progressbar" style="width:${Math.min(percentage,100)}%"></div></div><hr>${teacherDetailsHTML}</div></div></div>`; }).join('')}</div></div>
+    <div class="tab-pane fade" id="stats-subjects-pane" role="tabpanel"><h4 class="mb-3">دۆخی دابەشکرنا وانان (لدویڤ نصابی)</h4><div class="table-responsive"><table class="table table-striped table-hover"><thead class="table-light"><tr><th>بابەت</th><th>وانەیێن پێدڤی</th><th>وانەیێن دابەشکری</th><th>جیاوازی</th><th>رێژا ته‌واوبوونێ</th></tr></thead><tbody>${subjectStatus.map(s => { const diff = s.distributed - s.required; let diffClass = diff < 0 ? 'text-danger' : diff > 0 ? 'text-warning' : 'text-success'; const percentage = s.required > 0 ? Math.round((s.distributed / s.required) * 100) : (s.distributed > 0 ? 100 : 0); let progressClass = percentage < 50 ? 'bg-danger' : percentage < 100 ? 'bg-warning' : 'bg-success'; return `<tr><td>${s.name}</td><td>${s.required}</td><td>${s.distributed}</td><td class="fw-bold ${diffClass}">${diff > 0 ? '+' : ''}${diff}</td><td><div class="progress" style="height: 20px;"><div class="progress-bar ${progressClass}" role="progressbar" style="width: ${percentage}%">${percentage}%</div></div></td></tr>`; }).join('')}</tbody></table></div></div>
+    <div class="tab-pane fade" id="stats-classes-pane" role="tabpanel"><h4 class="mb-3">دۆخی وانەیێن دابەشکری بۆ هەر پولەکێ (لدویڤ نصابی)</h4><div class="row">${Object.entries(classDetails).map(([className, classData]) => { const grade = getGradeFromClassName(className); const requiredSubjects = {}; if (grade && schedule.nisab) { for (const subject in schedule.nisab) { if (schedule.nisab[subject][grade]) requiredSubjects[subject] = schedule.nisab[subject][grade]; } } const allClassSubjects = [...new Set([...Object.keys(requiredSubjects), ...Object.keys(classData.subjects)])].sort(); let totalRequired = Object.values(requiredSubjects).reduce((a, b) => a + b, 0); let totalDistributedInClass = classData.total; let statusBadge = ''; if (totalRequired > 0) { if (totalDistributedInClass === totalRequired) statusBadge = `<span class="badge bg-success-subtle text-success-emphasis rounded-pill">تەواو</span>`; else if (totalDistributedInClass > totalRequired) statusBadge = `<span class="badge bg-warning-subtle text-warning-emphasis rounded-pill">زێدە</span>`; else statusBadge = `<span class="badge bg-danger-subtle text-danger-emphasis rounded-pill">نه‌ته‌واو</span>`; } return `<div class="col-xl-4 col-md-6 mb-4"><div class="card h-100 shadow-sm"><div class="card-header d-flex justify-content-between align-items-center"><h6 class="mb-0 fw-bold"><i class="fas fa-school me-2"></i>پولا ${className}</h6>${statusBadge}</div><div class="card-body p-0"><ul class="list-group list-group-flush"><li class="list-group-item d-flex justify-content-between fw-bold bg-light-subtle"><span>کۆی گشتی:</span><span>پێدڤی: ${totalRequired} | دابەشکری: ${totalDistributedInClass}</span></li>${allClassSubjects.length > 0 ? allClassSubjects.map(subject => { const required = requiredSubjects[subject] || 0; const distributed = classData.subjects[subject] || 0; let icon = ''; if (required > 0) { if (distributed === required) icon = '<i class="fas fa-check-circle text-success"></i>'; else if (distributed < required) icon = '<i class="fas fa-exclamation-circle text-warning"></i>'; else icon = '<i class="fas fa-arrow-alt-circle-up text-info"></i>'; } else if (distributed > 0) { icon = '<i class="fas fa-plus-circle text-primary"></i>'; } return `<li class="list-group-item d-flex justify-content-between align-items-center small"><div>${icon ? icon + ' ' : ''}${subject}</div><span><span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis fw-normal">پ: ${required}</span><span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-normal">د: ${distributed}</span></span></li>`; }).join('') : `<li class="list-group-item text-center p-3 text-muted small">هیچ وانه‌یه‌ك نینه‌.</li>`}</ul></div></div></div>`; }).join('')}</div></div></div></div>`;
+    container.innerHTML = contentHTML;
+}
+
+    </script>
+</body>
+</html>
