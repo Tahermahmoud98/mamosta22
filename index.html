@@ -144,9 +144,6 @@
             .no-print, .no-print * { display: none !important; }
             .table { font-size: 7pt; }
             .table th, .table td { padding: 1px 2px; }
-            #additionalTablesContainer .table { margin-top: 25px !important; font-size: 9pt; }
-            #additionalTablesContainer .table td { height: 30px; }
-            #managerSignature { margin-top: 40px; }
             .table .badge {
                 background-color: transparent !important; color: inherit !important;
                 border: none !important; padding: 0 !important; font-size: inherit !important;
@@ -284,7 +281,7 @@
         </div>
         <div class="mb-3"><label class="form-label">بسپور</label>
             <select id="teacherSpecializationSelect" class="form-select" onchange="this.value==='یێن دی' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
-                <option>كوردی</option><option>بیركاری</option><option>ئێنگلێزی</option><option>عربی</option><option>زانست</option><option>ئاین</option><option>كومه‌لایه‌تی</option><option>كارامه‌ی</option><option>هونه‌ر</option><option>وه‌رزش</option><option>یێن دی</option>
+                <option>كوردی</option><option>بیركاری</option><option>ئێنگلێزی</option><option>عربی</option><option>زانست</option><option>ئاین</option><option>كومه‌لایه‌تی</option><option>كارامه‌ی</option><option>هونه‌ر</option><option>وه‌رزش</option><option>كومپیوته‌ر</option><option>یێن دی</option>
             </select>
             <input type="text" class="form-control mt-2" id="teacherSpecializationOther" style="display: none;" placeholder="بسپوریا دی بنڤیسە">
         </div>
@@ -346,7 +343,7 @@
     let modalLayoutMode = 'vertical'; // 'vertical' or 'horizontal'
     let currentEditingTeacher = null;
     
-    const PREDEFINED_SUBJECTS = ['كوردی', 'بیركاری', 'ئینگلیزی', 'زانست', 'عربی', 'كومه‌لایه‌تی', 'ئاين', 'كارامه‌ی', 'هونه‌ر', 'وه‌رزش'];
+    const PREDEFINED_SUBJECTS = ['كوردی', 'بیركاری', 'ئینگلیزی', 'زانست', 'عربی', 'كومه‌لایه‌تی', 'ئاين', 'كارامه‌ی', 'هونه‌ر', 'وه‌رزش', 'كومپیوته‌ر'];
     
     // --- DOM Element Caching ---
     const searchInput = document.getElementById('searchInput');
@@ -625,7 +622,7 @@
             grandTotal += (parseInt(row[3], 10) || 0) + (parseInt(row[4], 10) || 0);
         });
 
-        const studentTable = `<table class="table table-bordered">
+        const studentTable = `<h5 class="text-center mb-2">خشته‌یێ پێزانینێت قوتابی</h5><table class="table table-bordered">
             <thead><tr>${studentHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
             <tbody>${studentTableBody}</tbody>
             <tfoot class="table-light fw-bold"><tr>
@@ -637,7 +634,7 @@
         </table>`;
         
         const leaveHeaders = ['ژ', 'ناڤێ ماموستای', 'پسپوری', 'ژ بەروارا', 'هەتا بەروارا', 'ئەگەرێ مۆله‌تی'];
-        let leaveTable = `<table class="table table-bordered"><thead><tr>${leaveHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+        let leaveTable = `<h5 class="text-center mb-2">خشته‌یێ پێزانینێت موله‌تێن ماموستایان</h5><table class="table table-bordered"><thead><tr>${leaveHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
         for(let r=0; r < leaveTableRows; r++) {
              leaveTable += `<tr>`;
              for (let c=0; c < leaveHeaders.length; c++) {
@@ -668,7 +665,51 @@
     }
 
     // --- Printing Functions ---
-    const printStyleTemplate = `<style>body{font-family:"Noto Kufi Arabic",sans-serif;-webkit-print-color-adjust:exact!important;color-adjust:exact!important;}.table{width:100%;border-collapse:collapse;font-size:7pt}.table th,.table td{border:1px solid #ccc!important;padding:1px 2px;text-align:center;white-space:normal;vertical-align:middle;}.table thead th{background-color:#f2f2f2!important;font-weight:bold}.table .badge{background-color:transparent!important;color:inherit!important;border:none!important;padding:0!important;font-size:inherit!important;font-weight:normal!important;}thead{display:table-header-group}tfoot{display:table-footer-group}hr{margin:2px 0!important;border-top:1px solid #ccc!important;}#additionalTablesContainer .table{margin-top:25px!important;font-size:9pt;}#additionalTablesContainer .table td{height:30px;}#managerSignature{margin-top:40px;text-align:center;}@page{size:landscape;margin:.5cm}</style>`;
+    const printStyleTemplate = `<style>
+        body{font-family:"Noto Kufi Arabic",sans-serif;-webkit-print-color-adjust:exact!important;color-adjust:exact!important;}
+        .table{width:100%;border-collapse:collapse;font-size:8pt; margin-top: 15px;}
+        .table th,.table td{border:1px solid #ccc!important;padding:2px 3px;text-align:center;white-space:normal;vertical-align:middle;word-wrap:break-word;}
+        .table thead th{background-color:#f2f2f2!important;font-weight:bold}
+        .table .badge{background-color:transparent!important;color:inherit!important;border:none!important;padding:0!important;font-size:inherit!important;font-weight:normal!important;}
+        thead{display:table-header-group}
+        tfoot{display:table-footer-group}
+        hr{display: none;}
+        h4.print-only { display: block !important; font-size: 14pt; font-weight: bold; }
+        h5{font-size:11pt; font-weight:bold; margin-top:25px !important; margin-bottom:5px !important; text-align:center;}
+        
+        /* SIDE-BY-SIDE LAYOUT FOR ADDITIONAL TABLES ON PRINT */
+        #additionalTablesContainer { margin-top: 30px !important; }
+        #additionalTablesContainer .row {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            width: 100%;
+            gap: 15px;
+        }
+        #additionalTablesContainer .col-lg-7 {
+            width: 62% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        #additionalTablesContainer .col-lg-5 {
+            width: 38% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        #additionalTablesContainer .d-flex.flex-column {
+            display: flex !important;
+            flex-direction: column !important;
+            height: 100%;
+        }
+        #additionalTablesContainer .table{margin-top:0 !important; font-size:9pt;}
+        #additionalTablesContainer .table td{height:28px;}
+        #managerSignature{
+            margin-top: auto !important;
+            padding-top: 20px;
+            text-align:center;
+        }
+        
+        @page{size:landscape;margin:.5cm}
+    </style>`;
 
     function printWithContent(title, contentHTML) {
         const printWindow = window.open('', '', 'height=800,width=1200');
@@ -684,8 +725,8 @@
         
         const printAreaClone = printAreaNode.cloneNode(true);
         printAreaClone.querySelectorAll(".no-print, [contenteditable='true']").forEach(el => {
-            el.classList.add('d-none');
-            if (el.isContentEditable) el.removeAttribute('contenteditable');
+            if(el.hasAttribute('contenteditable')) el.removeAttribute('contenteditable');
+            if(el.classList.contains('no-print')) el.remove();
         });
         printWithContent(`چاپكرنا خشتان - ${activeScheduleName}`, printAreaClone.innerHTML);
     }
@@ -996,13 +1037,11 @@
         }
     }
 
-    // --- **MAJOR FIX in this function** ---
     function updateClassInputsInModal(teacher = null) {
         const schedule = allSchedules[activeScheduleName];
         const container = document.getElementById("teacherClassesContainer");
         const currentTeacherId = parseInt(document.getElementById('teacherId').value) || nextTeacherId;
 
-        // Step 1: Preserve the current (unsaved) values from the input fields before redrawing.
         const transientClassValues = {};
         container.querySelectorAll("input[type='number'][data-class-name]").forEach(input => {
             const { className, subjectName } = input.dataset;
@@ -1013,14 +1052,11 @@
             }
         });
 
-        // Get the current list of subjects from the subject rows.
         const subjectNames = Array.from(document.querySelectorAll("#subjectsContainer .subject-row")).map(getSubjectNameFromRow).filter(Boolean);
 
-        // Step 2: Rebuild the HTML, using the preserved values.
         if (modalLayoutMode === 'vertical') {
             const columnsHTML = schedule.columns.map(colName => {
                 let inputsHTML = subjectNames.map(subName => {
-                    // Step 3: Restore state. Prioritize transient (unsaved) values, then fall back to saved data.
                     const value = transientClassValues?.[colName]?.[subName] || teacher?.classes?.[colName]?.[subName] || "";
                     const isOtherAssigned = isSubjectAlreadyAssignedToClass(subName, colName, currentTeacherId);
                     const warningIcon = isOtherAssigned ? `<i class="fas fa-exclamation-triangle text-warning" title="ئه‌ڤ بابه‌ته‌ بۆ ڤێ پولێ ژلایێ ماموستایه‌كێ دی ڤه‌ هاتیه‌ دانان"></i>` : '';
@@ -1050,7 +1086,6 @@
             container.innerHTML = `<div class="table-responsive"><table class="table table-bordered table-sm text-center"><thead><tr><th>بابەت</th>${schedule.columns.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${tableContent}</tbody></table></div>`;
         }
 
-        // Step 4: Re-attach event listeners to the new inputs.
         container.querySelectorAll("input[type='number']").forEach(input => { 
             input.addEventListener('input', (event) => { 
                 if (modalLayoutMode === 'vertical') updateClassCardHeader(event.target); 
@@ -1077,8 +1112,6 @@
             subjects: [], classes: {}
         };
         
-        // **FIX**: The source of truth for saving is now the class inputs.
-        // This automatically handles removing subjects if all their periods are set to 0.
         const finalSubjects = {};
         document.querySelectorAll("#teacherClassesContainer input[type='number']").forEach(input => {
             const periods = parseInt(input.value, 10) || 0;
